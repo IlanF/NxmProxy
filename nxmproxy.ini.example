@@ -1,0 +1,25 @@
+; Paths to programs which can handle nxm:// links
+; either the path to the exe which will be ran with the URL as the first argument
+; or the command to run, {0} will be replaced with the URL in the command, it will be executed as-is
+[PATHS]
+nmm=C:\Program Files\Nexus Mod Manager\NexusClient.exe
+vortex="C:\Program Files\Black Tree Gaming Ltd\Vortex\Vortex.exe" -d "{0}"
+
+
+
+; Set the handlers to use for which games
+; Any games not listed here will use the default handler if it is defined
+; The selected handler for the game must be defined in the PATHS section above
+
+; Use the Nexus Mods URL to find the name of the game which must be used,
+; for examle, for Fallout 4:
+; https://www.nexusmods.com/fallout4/
+; fallout4 - is the name for the game, and we want to use NMM as the handler
+; so we use:
+; fallout4=nmm
+; Or if we wanted to use Vortex:
+; fallout4=vortex
+[HANDLERS]
+default=nmm
+;skyrim=vortex
+;oblivion=nmm
