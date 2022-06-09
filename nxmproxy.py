@@ -1,16 +1,28 @@
-import configparser, sys, re, os, subprocess, time
+import configparser
+import ctypes
+import os
+import re
+import subprocess
+import sys
 
-time.sleep(1)
 
-def pause():
-    programPause = input("Press the <ENTER> key to continue...")
+#  Styles:
+#  0 : OK
+#  1 : OK | Cancel
+#  2 : Abort | Retry | Ignore
+#  3 : Yes | No | Cancel
+#  4 : Yes | No
+#  5 : Retry | Cancel
+#  6 : Cancel | Try Again | Continue
+def message_box(title, text, style=0):
+    return ctypes.windll.user32.MessageBoxW(0, text, title, style)
+
 
 # exit if we don't get a nxm url
-nxm_url = ''
 if len(sys.argv) <= 1:
-    print('NXM URL was not provided.')
-    pause()
+    message_box("NxmProxy Error", "NXM URL was not provided.")
     sys.exit(1)
+
 
 nxm_url = sys.argv[1]
 
@@ -18,48 +30,50 @@ try:
     # load config
     config_path = os.path.dirname(sys.argv[0]) + '/nxmproxy.ini'
     if not os.path.exists(config_path):
-        print(f'Settings file was not found at `{config_path}`')
-        pause()
+        message_box("NxmProxy Error", f'Settings file was not found at `{config_path}`')
         sys.exit(2)
 
     config = configparser.ConfigParser()
     config.read(config_path)
 
     if len(config.sections()) == 0:
-        print(f'Settings file looks incorrect.')
-        pause()
+        message_box("NxmProxy Error", 'Settings file looks incorrect')
         sys.exit(3)
-
 
     # process the url
     # nxm://fallout76/mods/405/files/4959?key=XXXX&expires=####&user_id=####
-    match = re.match(r"^nxm:\/\/([^\/]+)(.+)$", nxm_url, re.IGNORECASE)
+    match = re.match(r"^nxm://([^/]+)(.+)$", nxm_url, re.IGNORECASE)
 
-    if match == None:
-        print(f'NXM URL `{nxm_url}` is invalid.')
-        pause()
+    if match is None:
+        message_box("NxmProxy Error", f'NXM URL `{nxm_url}` is invalid.')
         sys.exit(4)
 
     game = match[1]
 
-
     # get the correct handler for the game, and it's path
-    if game not in config['HANDLERS'] and 'default' not in config['HANDLERS']:
-        print(f'Game `{game}` was not defined under HANDLERS, and no default handler was defined either.')
-        pause()
+    if game not in config['Handlers'] and 'default' not in config['Handlers']:
+        message_box("NxmProxy Error", f'Game `{game}` was not defined under Handlers, and no default handler was defined either.')
         sys.exit(5)
-    elif game not in config['HANDLERS']:
-        handler = config['HANDLERS']['default']
+    elif game not in config['Handlers']:
+        defaultHandler = config['Handlers']['default']
+        response = message_box("NxmProxy Error", f'A handler for `{game}` was not defined under Handlers, would you like to open the config file? Click "No" to use the default handler ({defaultHandler}), or click "Cancel" to abort.', style=3)
+        print(response)
+        # 6 = Yes, 7 = No, 2 = Cancel
+        if response == 7:
+            handler = defaultHandler
+        if response == 6:
+            subprocess.Popen(f'notepad.exe {config_path}')
+            sys.exit(0)
+        if response == 2:
+            sys.exit(7)
     else:
-        handler = config['HANDLERS'][game]
+        handler = config['Handlers'][game]
 
-    if handler not in config['PATHS'] or not config['PATHS'][handler]:
-        print(f'Handler `{handler}` was not defined under PATHS.')
-        pause()
+    if handler not in config['Paths'] or not config['Paths'][handler]:
+        message_box("NxmProxy Error", f'Handler `{handler}` was not defined under Paths.')
         sys.exit(6)
 
-    path = config['PATHS'][handler]
-
+    path = config['Paths'][handler]
 
     # pass the nxm:// url to the proxied executable
     if path[0] != '"':
@@ -70,11 +84,9 @@ try:
     else:
         cmd = f'{path} "{nxm_url}"'
 
-
     print('Launching...')
     subprocess.Popen(cmd)
     sys.exit(0)
 except Exception as err:
-    print("Error: " + str(err))
-    pause()
+    message_box("NxmProxy Error", "Error: " + str(err))
     sys.exit(50)
